@@ -178,6 +178,9 @@ input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
 .cc-info{flex:1;min-width:0}.cc-desc{font-size:13.5px;font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cc-meta{font-size:11.5px;color:var(--muted)}.cc-price{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:14px;font-weight:700;color:var(--action);flex-shrink:0}
 .cc-actions{display:flex;gap:3px;flex-shrink:0}
+.feedback-fab{position:fixed;bottom:22px;right:22px;width:52px;height:52px;border-radius:50%;background:var(--action);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(37,99,235,.4);transition:all .15s;z-index:40}
+.feedback-fab:hover{background:var(--action-2);transform:translateY(-2px) scale(1.05)}
+@media(max-width:960px){.feedback-fab{bottom:16px;right:16px;width:46px;height:46px;font-size:19px}}
 @media(max-width:960px){
 .topbar{padding:10px 14px}.main{padding:20px 14px 50px}.home-grid{grid-template-columns:1fr 1fr}
 .home-cta{flex-direction:column;text-align:center;padding:24px 18px}
@@ -195,6 +198,7 @@ h1{font-size:28px}h2{font-size:21px}
 <header class="topbar" id="topbar"><div class="brand"><div class="brand-mark">P</div><div class="brand-name">Presupuestador <em>Pro</em></div></div><nav class="nav" id="nav"></nav><div class="biz-label" id="bizLabel"></div></header>
 <main class="main" id="main"></main>
 </div>
+<button id="feedbackFab" class="feedback-fab" title="Mandar una sugerencia" style="display:none">💡</button>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -369,6 +373,21 @@ document.body.appendChild(modal);modal.onclick=e=>{if(e.target===modal)modal.rem
 $('#qmClose',modal).onclick=()=>modal.remove();
 $('#qmGo',modal).onclick=()=>{modal.remove();setView('billing')}}
 
+/* ---- Feedback flotante ---- */
+function openFeedbackModal(){const modal=document.createElement('div');modal.className='modal-bg';
+modal.innerHTML=`<div class="modal"><div class="modal-title">💡 Tu opinión nos ayuda</div>
+<div class="modal-sub">Contanos una idea, un problema o algo que te gustaría que la app tenga.</div>
+<div class="field"><textarea class="textarea" id="fbMsg" placeholder="Escribí acá tu sugerencia..." style="min-height:110px"></textarea></div>
+<div class="modal-actions"><button class="btn btn-soft" id="fbClose">Cerrar</button><button class="btn btn-action" id="fbSend">${icoCheck()} Enviar</button></div></div>`;
+document.body.appendChild(modal);modal.onclick=e=>{if(e.target===modal)modal.remove()};
+$('#fbClose',modal).onclick=()=>modal.remove();
+$('#fbSend',modal).onclick=async()=>{const msg=$('#fbMsg',modal).value.trim();if(!msg){toast('Escribí algo antes de enviar');return}
+const btn=$('#fbSend',modal);btn.disabled=true;
+const{error}=await sb.from('feedback').insert({user_id:S.session.user.id,message:msg,page:S.view});
+if(error){toast('Error al enviar, intentá de nuevo');console.error(error);btn.disabled=false;return}
+modal.remove();toast('¡Gracias! Recibimos tu sugerencia')}}
+$('#feedbackFab').onclick=()=>openFeedbackModal();
+
 /* ---- Navegación ---- */
 function setView(v,data=null){S.view=v;if(v==='new')S.currentQuote=data||newDraft();if(v==='preview'||v==='edit')S.currentQuote=data;render();window.scrollTo({top:0,behavior:'smooth'})}
 function newDraft(){return{id:null,number:pad(S.business.nextNum||1),date:new Date().toISOString(),validityDays:7,client:{name:'',phone:'',address:''},items:[{desc:'',qty:1,unit:'un',price:0}],ivaEnabled:true,ivaRate:21,discount:0,paymentTerms:S.business.paymentTerms||'',notes:'',status:'pendiente',deliveryDate:'',templateId:'',createdAt:new Date().toISOString()}}
@@ -381,6 +400,7 @@ function calc(q){const sub=(q.items||[]).reduce((a,i)=>a+(Number(i.qty)||0)*(Num
    ================================================================ */
 function render(){if(!S.session)S.view='auth';renderTopbar();const m=$('#main');m.innerHTML='';const views={auth:vAuth,setup:vSetup,home:vHome,new:vBuilder,edit:vBuilder,preview:vPreview,history:vHistory,catalog:vCatalog,settings:vSettings,billing:vBilling};(views[S.view]||(S.business?vHome:vSetup))(m)}
 function renderTopbar(){const nav=$('#nav'),biz=$('#bizLabel');
+$('#feedbackFab').style.display=S.session?'flex':'none';
 if(!S.session){nav.innerHTML='';biz.innerHTML='';return}
 if(!S.business){nav.innerHTML='';biz.innerHTML='<span>Configurá tu negocio</span> <button class="nav-btn" id="logoutBtn">Salir</button>';$('#logoutBtn').onclick=logout;return}
 const tabs=[{id:'home',l:'Inicio'},{id:'new',l:'+ Presupuesto'},{id:'history',l:'Historial'},{id:'catalog',l:'Catálogo'},{id:'billing',l:'Plan'},{id:'settings',l:'Ajustes'}];
