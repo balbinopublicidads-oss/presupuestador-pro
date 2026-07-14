@@ -30,11 +30,22 @@ Deno.serve(async (req) => {
   const mpData = await mpRes.json()
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
-  const userId = mpData.external_reference
-  if (userId) {
-    await supabase.from('subscriptions')
-      .update({ status: mpData.status, mp_preapproval_id: preapprovalId, updated_at: new Date().toISOString() })
-      .eq('user_id', userId)
+
+  // Primero intenta por mp_preapproval_id (queda seteado desde create-subscription
+  // apenas se crea la suscripción). Si no encuentra fila, usa external_reference
+  // como respaldo (por si la suscripción se generó por otra vía).
+  const { data: byPreapproval } = await supabase.from('subscriptions')
+    .update({ status: mpData.status, updated_at: new Date().toISOString() })
+    .eq('mp_preapproval_id', preapprovalId)
+    .select()
+
+  if (!byPreapproval || byPreapproval.length === 0) {
+    const userId = mpData.external_reference
+    if (userId) {
+      await supabase.from('subscriptions')
+        .update({ status: mpData.status, mp_preapproval_id: preapprovalId, updated_at: new Date().toISOString() })
+        .eq('user_id', userId)
+    }
   }
 
   return new Response('ok', { status: 200 })

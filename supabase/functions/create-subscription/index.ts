@@ -1,9 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')!
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const FOUNDER_PLAN_ID = 'eb35d373e8ce4e54a5fb5c551ebc8f49'
-const PRO_PLAN_ID = 'a60bec0f60a54a8f91d659f766b4df08'
+const APP_BACK_URL = Deno.env.get('APP_BACK_URL') ?? 'https://presupuestador-pro.vercel.app/app.html'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,32 +34,58 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Ya tenés una suscripción activa' }), { status: 400, headers: corsHeaders })
   }
 
-  let planId = PRO_PLAN_ID
-  let plan = 'pro'
   let price = 8990
+  let plan = 'pro'
   if (sub?.founder_number) {
-    planId = FOUNDER_PLAN_ID
-    plan = 'founder'
     price = sub.current_price ?? 3990
+    plan = 'founder'
   } else {
     const { data: slot } = await supabase.rpc('try_assign_founder_slot', { p_user_id: user.id })
     if (slot) {
-      planId = FOUNDER_PLAN_ID
-      plan = 'founder'
       price = 3990
+      plan = 'founder'
     }
+  }
+
+  // Se crea el preapproval directamente vía API (en vez de redirigir al checkout
+  // genérico del plan) porque esa es la única forma en que Mercado Pago conserva
+  // el external_reference, necesario para que el webhook sepa a qué usuario
+  // corresponde el pago.
+  const mpRes = await fetch('https://api.mercadopago.com/preapproval', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      reason: `Presupuestador Pro - ${plan === 'founder' ? 'Fundador' : 'Plan Pro'}`,
+      external_reference: user.id,
+      auto_recurring: {
+        frequency: 1,
+        frequency_type: 'months',
+        transaction_amount: price,
+        currency_id: 'ARS',
+      },
+      payer_email: user.email,
+      back_url: APP_BACK_URL,
+      status: 'pending',
+    }),
+  })
+
+  const mpData = await mpRes.json()
+  if (!mpRes.ok) {
+    return new Response(JSON.stringify({ error: 'Error de Mercado Pago', detail: mpData }), { status: 502, headers: corsHeaders })
   }
 
   await supabase.from('subscriptions').update({
     plan,
     status: 'pending',
+    mp_preapproval_id: mpData.id,
     current_price: price,
     updated_at: new Date().toISOString(),
   }).eq('user_id', user.id)
 
-  const checkoutUrl = `https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=${planId}&external_reference=${user.id}`
-
-  return new Response(JSON.stringify({ checkoutUrl }), {
+  return new Response(JSON.stringify({ checkoutUrl: mpData.init_point }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
 })
