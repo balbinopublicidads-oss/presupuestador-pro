@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-MC63EQBD0Q"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-MC63EQBD0Q');
+</script>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>¡Listo! — Presupuestador Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{--action:#2563EB;--ink:#0F172A;--muted:#64748B;--cream:#F8FAFC}
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--cream);font-family:'Inter',-apple-system,sans-serif;color:var(--ink);text-align:center;padding:24px}
+.card{max-width:420px}
+.icon{font-size:44px;margin-bottom:18px}
+h1{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-bottom:12px}
+p{color:var(--muted);font-size:15px;margin-bottom:26px;line-height:1.5}
+a.btn{display:inline-flex;align-items:center;justify-content:center;padding:13px 26px;background:var(--action);color:#fff;font-weight:700;border-radius:10px;text-decoration:none;font-size:15px}
+</style>
+</head>
+<body>
+<div class="card">
+<div class="icon">✅</div>
+<h1>¡Listo! Tu suscripción está en camino</h1>
+<p>Estamos confirmando tu pago con Mercado Pago. Puede tardar unos segundos en activarse. Te llevamos de vuelta a la app...</p>
+<a class="btn" href="/app.html">Ir a la app ahora</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL='https://tczjkfcfpfplzzrnpufr.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjemprZmNmcGZwbHp6cm5wdWZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyNzYwNjMsImV4cCI6MjA5ODg1MjA2M30.opOK-IUFs4_BP9--2s-dfqmw4pfP-ziS-aGxpHrYHI0';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false}});
+
+(async function(){
+  try{
+    const saved=localStorage.getItem('pp_session');
+    if(!saved) return;
+    const{access_token,refresh_token}=JSON.parse(saved);
+    const{data}=await sb.auth.setSession({access_token,refresh_token});
+    if(!data.session) return;
+    const{data:sub}=await sb.from('subscriptions').select('*').eq('user_id',data.session.user.id).maybeSingle();
+    if(!sub) return;
+    const txId=sub.mp_preapproval_id||('sub_'+data.session.user.id);
+    const already=sessionStorage.getItem('purchase_tracked_'+txId);
+    if(!already && window.gtag){
+      gtag('event','purchase',{
+        transaction_id: txId,
+        currency:'ARS',
+        value: sub.current_price||0,
+        items:[{item_name: sub.plan==='founder'?'Fundador':'Pro', price: sub.current_price||0}]
+      });
+      sessionStorage.setItem('purchase_tracked_'+txId,'1');
+    }
+  }catch(e){console.error(e)}
+})();
+
+setTimeout(()=>{location.href='/app.html'},3500);
+</script>
+</body>
+</html>

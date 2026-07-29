@@ -2,6 +2,14 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"/>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-MC63EQBD0Q"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-MC63EQBD0Q');
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <meta name="description" content="Presupuestador Pro — Presupuestos profesionales en PDF, WhatsApp y cobro online."/>
 <title>Presupuestador Pro v1.1</title>
@@ -678,6 +686,8 @@ const sub=S.subscription||{plan:'free',status:'inactive'};
 const used=quotesThisMonth();const slotsLeft=Math.max(30-(S.founderSlotsTaken||0),0);
 const isFounderEligible=slotsLeft>0&&sub.plan!=='pro'&&sub.status!=='authorized';
 const priceLabel=sub.founderNumber?`$${fmtARS(sub.currentPrice||3990)}/mes`:(isFounderEligible?'$3.990/mes':'$8.990/mes');
+const priceValue=sub.founderNumber?(sub.currentPrice||3990):(isFounderEligible?3990:8990);
+const planName=sub.founderNumber||isFounderEligible?'Fundador':'Pro';
 let statusHTML='';
 if(sub.status==='authorized'){statusHTML=`<div class="reminder-box" style="background:var(--success-bg);border-color:#16653433"><div class="r-icon">✓</div><div class="r-text" style="color:var(--success)"><strong>Suscripción activa</strong> — plan ${sub.plan==='founder'?'Fundador':'Pro'} · $${fmtARS(sub.currentPrice||0)}/mes</div></div>`}
 else if(sub.status==='pending'){statusHTML=`<div class="reminder-box"><div class="r-icon">⏳</div><div class="r-text"><strong>Suscripción pendiente</strong> — completá el pago en Mercado Pago para activarla</div></div>`}
@@ -700,6 +710,7 @@ ${sub.status==='authorized'?'':`<button class="btn btn-action btn-lg" id="subBtn
 </div>`;
 const subBtn=$('#subBtn',w);
 if(subBtn)subBtn.onclick=async()=>{
+if(window.gtag)gtag('event','begin_checkout',{currency:'ARS',value:priceValue,items:[{item_name:planName,price:priceValue}]});
 subBtn.disabled=true;subBtn.textContent='Redirigiendo...';
 const{data,error}=await sb.functions.invoke('create-subscription',{method:'POST'});
 if(error||!data?.checkoutUrl){toast('Error al iniciar la suscripción');subBtn.disabled=false;subBtn.textContent='Suscribirme';console.error(error);return}
