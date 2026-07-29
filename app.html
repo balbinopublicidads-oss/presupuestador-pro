@@ -236,7 +236,7 @@ function quoteToRow(q){return{user_id:S.session.user.id,number:q.number,date:(q.
 function catFromRow(r){return{id:r.id,desc:r.description,unit:r.unit,price:Number(r.price),category:r.category||''}}
 function catToRow(c){return{user_id:S.session.user.id,description:c.desc,unit:c.unit||'un',price:c.price||0,category:c.category||null}}
 function subFromRow(r){return{plan:r.plan,status:r.status,founderNumber:r.founder_number,currentPrice:r.current_price?Number(r.current_price):null,mpPreapprovalId:r.mp_preapproval_id}}
-function quotesThisMonth(){const start=new Date();start.setDate(1);start.setHours(0,0,0,0);return S.quotes.filter(q=>new Date(q.createdAt)>=start).length}
+function quotesUsedTotal(){return S.quotes.length}
 
 /* ---- CRUD Supabase ---- */
 async function loadAll(){const uid=S.session.user.id;
@@ -375,7 +375,7 @@ function toast(m){const t=document.createElement('div');t.className='toast';t.te
 function daysSince(d){return Math.floor((Date.now()-new Date(d).getTime())/(86400000))}
 function showQuotaModal(){const modal=document.createElement('div');modal.className='modal-bg';
 modal.innerHTML=`<div class="modal"><div class="modal-title">Llegaste al límite del plan free</div>
-<div class="modal-sub">Ya usaste tus 2 presupuestos gratis de este mes. Suscribite para presupuestos ilimitados.</div>
+<div class="modal-sub">Ya usaste tus 2 presupuestos gratis. Suscribite para presupuestos ilimitados.</div>
 <div class="modal-actions"><button class="btn btn-soft" id="qmClose">Cerrar</button><button class="btn btn-action" id="qmGo">Ver planes</button></div></div>`;
 document.body.appendChild(modal);modal.onclick=e=>{if(e.target===modal)modal.remove()};
 $('#qmClose',modal).onclick=()=>modal.remove();
@@ -467,8 +467,8 @@ let reminderHTML='';
 if(stale.length>0){reminderHTML=`<div class="reminder-box"><div class="r-icon">⏰</div><div class="r-text"><strong>${stale.length} presupuesto${stale.length>1?'s':''}</strong> sin respuesta hace más de 3 días</div><button class="btn btn-soft btn-sm" id="seeStale">Ver y hacer seguimiento</button></div>`}
 
 let planHTML='';
-if((S.subscription?.plan||'free')==='free'){const usedQ=quotesThisMonth();const slotsLeft=Math.max(30-(S.founderSlotsTaken||0),0);
-planHTML=`<div class="reminder-box" style="background:var(--info-bg);border-color:#1e40af33"><div class="r-icon">📋</div><div class="r-text" style="color:var(--info)"><strong>${usedQ} de 2</strong> presupuestos gratis usados este mes${slotsLeft>0?` · quedan <strong>${slotsLeft} de 30</strong> lugares fundadores`:''}</div><button class="btn btn-soft btn-sm" id="goBilling">Ver planes</button></div>`}
+if((S.subscription?.plan||'free')==='free'){const usedQ=quotesUsedTotal();const slotsLeft=Math.max(30-(S.founderSlotsTaken||0),0);
+planHTML=`<div class="reminder-box" style="background:var(--info-bg);border-color:#1e40af33"><div class="r-icon">📋</div><div class="r-text" style="color:var(--info)"><strong>${usedQ} de 2</strong> presupuestos gratis usados${slotsLeft>0?` · quedan <strong>${slotsLeft} de 30</strong> lugares fundadores`:''}</div><button class="btn btn-soft btn-sm" id="goBilling">Ver planes</button></div>`}
 
 w.innerHTML=`<div class="home-cta"><div class="home-cta-copy"><h2>¿Nuevo <em>trabajo</em>?</h2><p>Armá el presupuesto en 2 minutos, mandalo en PDF por WhatsApp y cerrá más.</p></div><button class="btn btn-action btn-lg" id="newQ">${icoPlus()} Crear presupuesto</button></div>
 ${reminderHTML}
@@ -683,7 +683,7 @@ $$('[data-pi]',modal).forEach(b=>b.onclick=()=>{const c=S.catalog[Number(b.datas
 /* ---- BILLING (Plan y suscripción) ---- */
 function vBilling(m){const w=document.createElement('div');w.className='view';
 const sub=S.subscription||{plan:'free',status:'inactive'};
-const used=quotesThisMonth();const slotsLeft=Math.max(30-(S.founderSlotsTaken||0),0);
+const used=quotesUsedTotal();const slotsLeft=Math.max(30-(S.founderSlotsTaken||0),0);
 const isFounderEligible=slotsLeft>0&&sub.plan!=='pro'&&sub.status!=='authorized';
 const priceLabel=sub.founderNumber?`$${fmtARS(sub.currentPrice||3990)}/mes`:(isFounderEligible?'$3.990/mes':'$8.990/mes');
 const priceValue=sub.founderNumber?(sub.currentPrice||3990):(isFounderEligible?3990:8990);
@@ -697,8 +697,8 @@ ${statusHTML}
 <div class="card">
 <h3 class="card-title">Free</h3><p class="card-sub">Para arrancar</p>
 <div class="stat-val mono" style="margin-bottom:10px">$0</div>
-<div class="hint" style="margin-bottom:14px">Hasta 2 presupuestos por mes</div>
-<div class="totals-row"><span>Presupuestos usados este mes</span><strong>${used} / 2</strong></div>
+<div class="hint" style="margin-bottom:14px">2 presupuestos en total para probar</div>
+<div class="totals-row"><span>Presupuestos usados</span><strong>${used} / 2</strong></div>
 </div>
 <div class="card" style="border-color:var(--action)">
 <h3 class="card-title">${isFounderEligible?'Fundador 🚀':'Pro'}</h3><p class="card-sub">Presupuestos ilimitados</p>
