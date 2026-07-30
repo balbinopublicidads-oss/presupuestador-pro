@@ -472,7 +472,10 @@ function vSetup(m){const w=document.createElement('div');w.className='view';w.in
 let logo=null;$('#logoIn',w).onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{logo=ev.target.result;$('#logoPrev',w).innerHTML=`<img src="${logo}"/>`};r.readAsDataURL(f)};
 $('#bSv',w).onclick=async()=>{const n=$('#bN',w).value.trim(),p=$('#bP',w).value.trim();if(!n){toast('Falta el nombre');return}if(!p){toast('Falta el teléfono');return}
 const biz={name:n,phone:p,cuit:$('#bC',w).value.trim(),email:$('#bE',w).value.trim(),address:$('#bA',w).value.trim(),rubro:$('#bR',w).value,logo,paymentTerms:'50% al aceptar, 50% al finalizar el trabajo.',nextNum:1};
-const saved=await saveBusiness(biz);if(!saved)return;toast('Listo! Ya podés presupuestar.');setView('home')};m.appendChild(w)}
+const saved=await saveBusiness(biz);if(!saved)return;toast('Listo! Ya podés presupuestar.');
+setView('home');
+const tpl=TPLS.find(t=>t.id===biz.rubro&&t.id!=='general');
+if(tpl&&tpl.items.some(i=>i.desc))offerCatalogPreload(tpl)};m.appendChild(w)}
 
 /* ---- DASHBOARD MENSUAL (Fase 3) ---- */
 function monthRange(d){const start=new Date(d.getFullYear(),d.getMonth(),1);const end=new Date(d.getFullYear(),d.getMonth()+1,1);return{start,end}}
@@ -770,6 +773,27 @@ g.innerHTML=S.catalog.map((c,i)=>`<div class="catalog-card" data-ci="${i}"><div 
 <div class="cc-price">$${fmtARS(c.price)}</div><div class="cc-actions"><button class="btn btn-soft btn-sm ce" title="Editar">${icoEdit()}</button><button class="btn btn-danger-ghost btn-sm cd" title="Eliminar">${icoTrash()}</button></div></div>`).join('');
 $$('.catalog-card',g).forEach(card=>{const i=Number(card.dataset.ci);$('.ce',card).onclick=()=>openCatalogEditor(i,renderCatGrid);$('.cd',card).onclick=async()=>{if(confirm('¿Eliminar?')){await deleteCatalogItemRow(S.catalog[i].id);S.catalog.splice(i,1);renderCatGrid()}}})};
 renderCatGrid();m.appendChild(w)}
+
+/* ---- Precarga de catálogo sugerido por rubro (Fase 4) ---- */
+function offerCatalogPreload(tpl){
+const validItems=tpl.items.filter(i=>i.desc&&i.desc.trim());
+if(validItems.length===0)return;
+const modal=document.createElement('div');modal.className='modal-bg';
+const preview=validItems.slice(0,4).map(i=>esc(i.desc)).join(', ');
+modal.innerHTML=`<div class="modal"><div class="modal-title">¿Precargamos tu catálogo?</div>
+<div class="modal-sub">Te sugerimos <strong>${validItems.length} ítems</strong> típicos de ${esc(tpl.name)} (${preview}${validItems.length>4?'...':''}) para que no arranques de cero. Vos les ponés tus precios y los editás cuando quieras — no reemplaza nada que ya tengas.</div>
+<div class="modal-actions"><button class="btn btn-soft" id="ctSkip">Ahora no</button><button class="btn btn-action" id="ctYes">${icoCheck()} Precargar catálogo</button></div></div>`;
+document.body.appendChild(modal);modal.onclick=e=>{if(e.target===modal)modal.remove()};
+$('#ctSkip',modal).onclick=()=>modal.remove();
+$('#ctYes',modal).onclick=async()=>{
+const btn=$('#ctYes',modal);btn.disabled=true;btn.textContent='Cargando...';
+const rows=validItems.map(i=>({user_id:S.session.user.id,description:i.desc,unit:i.unit||'un',price:0,category:tpl.name}));
+const{data,error}=await sb.from('catalog_items').insert(rows).select();
+if(error){toast('Error al precargar el catálogo');console.error(error);modal.remove();return}
+S.catalog=[...S.catalog,...(data||[]).map(catFromRow)];
+modal.remove();toast(`${rows.length} ítems agregados a tu catálogo`);render();
+};
+}
 
 function openCatalogEditor(idx,cb){const isNew=idx===null;const item=isNew?{desc:'',unit:'un',price:0,category:''}:{...S.catalog[idx]};
 const modal=document.createElement('div');modal.className='modal-bg';
