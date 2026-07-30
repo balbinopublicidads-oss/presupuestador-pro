@@ -473,9 +473,11 @@ let logo=null;$('#logoIn',w).onchange=e=>{const f=e.target.files[0];if(!f)return
 $('#bSv',w).onclick=async()=>{const n=$('#bN',w).value.trim(),p=$('#bP',w).value.trim();if(!n){toast('Falta el nombre');return}if(!p){toast('Falta el teléfono');return}
 const biz={name:n,phone:p,cuit:$('#bC',w).value.trim(),email:$('#bE',w).value.trim(),address:$('#bA',w).value.trim(),rubro:$('#bR',w).value,logo,paymentTerms:'50% al aceptar, 50% al finalizar el trabajo.',nextNum:1};
 const saved=await saveBusiness(biz);if(!saved)return;toast('Listo! Ya podés presupuestar.');
-setView('home');
 const tpl=TPLS.find(t=>t.id===biz.rubro&&t.id!=='general');
-if(tpl&&tpl.items.some(i=>i.desc))offerCatalogPreload(tpl)};m.appendChild(w)}
+if(tpl&&tpl.items.some(i=>i.desc)){
+setView('home');
+offerCatalogPreload(tpl,()=>startExampleQuote(tpl));
+}else setView('home')};m.appendChild(w)}
 
 /* ---- DASHBOARD MENSUAL (Fase 3) ---- */
 function monthRange(d){const start=new Date(d.getFullYear(),d.getMonth(),1);const end=new Date(d.getFullYear(),d.getMonth()+1,1);return{start,end}}
@@ -599,6 +601,7 @@ if(!isEdit){
 w.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px;gap:14px;flex-wrap:wrap">
 <div><h2 class="serif">${isEdit?'Editar':'Nuevo'} presupuesto</h2><p class="muted" style="font-size:13px;margin-top:3px">N° ${q.number} · ${fmtDate(q.date)}</p></div>
 <div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-ghost" id="cancelB">Cancelar</button><button class="btn btn-primary" id="saveB">${icoCheck()} Guardar</button><button class="btn btn-action" id="saveSendB">${icoWA()} Guardar y enviar</button></div></div>
+${q.isExample?`<div class="reminder-box" style="background:var(--warn-bg);border-color:#D9770633"><div class="r-icon">⚠️</div><div class="r-text" style="color:var(--warn)"><strong>Esto es un presupuesto de ejemplo</strong> — los precios son de muestra. Cambiá el cliente y los precios por los reales antes de guardarlo y enviarlo.</div></div>`:''}
 <div class="builder"><div class="builder-form">
 ${tplHTML}
 <div class="section-title">Cliente <div class="line"></div></div>
@@ -789,24 +792,36 @@ $$('.catalog-card',g).forEach(card=>{const i=Number(card.dataset.ci);$('.ce',car
 renderCatGrid();m.appendChild(w)}
 
 /* ---- Precarga de catálogo sugerido por rubro (Fase 4) ---- */
-function offerCatalogPreload(tpl){
+function offerCatalogPreload(tpl,onDone){
 const validItems=tpl.items.filter(i=>i.desc&&i.desc.trim());
-if(validItems.length===0)return;
+if(validItems.length===0){if(onDone)onDone();return}
 const modal=document.createElement('div');modal.className='modal-bg';
 const preview=validItems.slice(0,4).map(i=>esc(i.desc)).join(', ');
 modal.innerHTML=`<div class="modal"><div class="modal-title">¿Precargamos tu catálogo?</div>
 <div class="modal-sub">Te sugerimos <strong>${validItems.length} ítems</strong> típicos de ${esc(tpl.name)} (${preview}${validItems.length>4?'...':''}) para que no arranques de cero. Vos les ponés tus precios y los editás cuando quieras — no reemplaza nada que ya tengas.</div>
 <div class="modal-actions"><button class="btn btn-soft" id="ctSkip">Ahora no</button><button class="btn btn-action" id="ctYes">${icoCheck()} Precargar catálogo</button></div></div>`;
-document.body.appendChild(modal);modal.onclick=e=>{if(e.target===modal)modal.remove()};
-$('#ctSkip',modal).onclick=()=>modal.remove();
+document.body.appendChild(modal);modal.onclick=e=>{if(e.target===modal){modal.remove();if(onDone)onDone()}};
+$('#ctSkip',modal).onclick=()=>{modal.remove();if(onDone)onDone()};
 $('#ctYes',modal).onclick=async()=>{
 const btn=$('#ctYes',modal);btn.disabled=true;btn.textContent='Cargando...';
 const rows=validItems.map(i=>({user_id:S.session.user.id,description:i.desc,unit:i.unit||'un',price:0,category:tpl.name}));
 const{data,error}=await sb.from('catalog_items').insert(rows).select();
-if(error){toast('Error al precargar el catálogo');console.error(error);modal.remove();return}
+if(error){toast('Error al precargar el catálogo');console.error(error);modal.remove();if(onDone)onDone();return}
 S.catalog=[...S.catalog,...(data||[]).map(catFromRow)];
-modal.remove();toast(`${rows.length} ítems agregados a tu catálogo`);render();
+modal.remove();toast(`${rows.length} ítems agregados a tu catálogo`);
+if(onDone)onDone();else render();
 };
+}
+
+/* ---- Onboarding rápido: presupuesto de ejemplo (Fase 7) ---- */
+function startExampleQuote(tpl){
+// Precios de muestra arbitrarios, solo para que el usuario vea un total real
+// y pruebe el flujo completo (PDF/WhatsApp) en menos de 3 minutos. No son
+// precios de mercado reales — por eso el aviso grande en el builder.
+const items=tpl.items.filter(i=>i.desc&&i.desc.trim()).slice(0,6).map((i,idx)=>({desc:i.desc,qty:i.qty||1,unit:i.unit||'un',price:(idx+1)*3000}));
+const draft={id:null,number:pad(S.business.nextNum||1),date:new Date().toISOString(),validityDays:7,client:{name:'Cliente de ejemplo',phone:'',address:''},items,ivaEnabled:true,ivaRate:21,discount:0,paymentTerms:S.business.paymentTerms||'',notes:'',status:'enviado',deliveryDate:'',templateId:tpl.id,createdAt:new Date().toISOString(),isExample:true};
+setView('new',draft);
+toast('Te armamos un presupuesto de ejemplo — revisalo y mandalo para probar la app');
 }
 
 function openCatalogEditor(idx,cb){const isNew=idx===null;const item=isNew?{desc:'',unit:'un',price:0,category:''}:{...S.catalog[idx]};
