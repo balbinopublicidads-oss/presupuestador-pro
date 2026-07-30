@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-MC63EQBD0Q"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-MC63EQBD0Q');
+</script>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="robots" content="noindex, nofollow"/>
+<title>Presupuesto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{
+--cream:#F8FAFC;--paper:#FFF;--ink:#0F172A;--muted:#64748B;--muted-2:#94A3B8;
+--border:#E2E8F0;--border-2:#CBD5E1;--action:#2563EB;--action-2:#1D4ED8;
+--success:#16A34A;--success-bg:#F0FDF4;--danger:#DC2626;--danger-bg:#FEF2F2;
+--warn:#D97706;--warn-bg:#FFFBEB;
+--radius:12px;--radius-lg:16px;--shadow:0 4px 14px rgba(15,23,42,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--cream);color:var(--ink);font-family:'Inter',-apple-system,sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;padding:20px 14px 60px}
+h1,h2,h3{font-weight:700;letter-spacing:-.02em;line-height:1.2}
+.mono{font-variant-numeric:tabular-nums}
+.wrap{max-width:640px;margin:0 auto}
+.state{text-align:center;padding:70px 20px;color:var(--muted)}
+.state h2{font-size:20px;color:var(--ink);margin-bottom:8px}
+.spinner{width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--action);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.doc{background:var(--paper);border:1px solid var(--border);border-radius:var(--radius-lg);padding:26px 22px;box-shadow:var(--shadow)}
+.doc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding-bottom:16px;border-bottom:2px solid var(--ink);margin-bottom:18px;flex-wrap:wrap}
+.biz-logo{max-width:110px;max-height:46px;margin-bottom:8px;display:block}
+.biz h3{font-size:18px;margin-bottom:4px}
+.biz-info{font-size:11.5px;color:var(--muted);line-height:1.6}
+.meta{text-align:right;margin-left:auto}
+.meta-label{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:2px}
+.meta-num{font-size:21px;font-weight:800;color:var(--action);letter-spacing:-.01em;margin-bottom:6px}
+.meta-dates{font-size:11.5px;color:var(--muted);line-height:1.7}
+.meta-dates strong{color:var(--ink);font-weight:600}
+.cli{margin-bottom:18px}
+.cli-label{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:4px}
+.cli-name{font-size:15px;font-weight:600}
+.cli-info{font-size:11.5px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;margin-bottom:14px}
+th{text-align:left;padding:7px 4px;border-bottom:1.5px solid var(--ink);font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+th:nth-child(n+2),td:nth-child(n+2){text-align:right}
+td{padding:9px 4px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:top}
+td:nth-child(n+2){font-variant-numeric:tabular-nums;font-size:12.5px;white-space:nowrap}
+.tot{margin-left:auto;width:min(280px,100%)}
+.tot-row{display:flex;justify-content:space-between;padding:3px 4px;font-size:13px;color:var(--muted)}
+.tot-row strong{color:var(--ink);font-weight:600}
+.tot-row.grand{margin-top:6px;padding-top:9px;border-top:1.5px solid var(--ink);font-size:15px;color:var(--ink)}
+.tot-row.grand strong{font-size:19px;font-weight:800;color:var(--action)}
+.notes{margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+.notes-title{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:4px}
+.notes-body{font-size:12.5px;color:var(--muted);line-height:1.65;white-space:pre-wrap}
+.panel{background:var(--paper);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px;box-shadow:var(--shadow);margin-top:16px;text-align:center}
+.panel h2{font-size:18px;margin-bottom:6px}
+.panel p{font-size:13.5px;color:var(--muted);margin-bottom:16px}
+.field{text-align:left;margin-bottom:14px}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px}
+input{width:100%;padding:11px 12px;background:var(--paper);border:1px solid var(--border);border-radius:9px;font-size:14.5px;font-family:inherit;color:var(--ink)}
+input:focus{outline:none;border-color:var(--action);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.acts{display:flex;gap:9px;flex-direction:column}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:14px 20px;font-size:15px;font-weight:700;border-radius:10px;border:none;cursor:pointer;font-family:inherit;transition:all .15s;line-height:1}
+.btn:disabled{opacity:.55;cursor:default}
+.btn-ok{background:var(--success);color:#fff}
+.btn-ok:not(:disabled):hover{background:#15803D;transform:translateY(-1px)}
+.btn-no{background:transparent;color:var(--danger);border:1.5px solid var(--border-2)}
+.btn-no:not(:disabled):hover{background:var(--danger-bg);border-color:var(--danger)}
+.banner{border-radius:var(--radius);padding:16px 18px;margin-top:16px;display:flex;align-items:flex-start;gap:12px;text-align:left}
+.banner .ic{font-size:22px;line-height:1;flex-shrink:0}
+.banner strong{display:block;font-size:15px;margin-bottom:2px}
+.banner span{font-size:13px;opacity:.9}
+.b-ok{background:var(--success-bg);border:1px solid #16A34A33;color:#166534}
+.b-no{background:var(--danger-bg);border:1px solid #DC262633;color:#991B1B}
+.b-warn{background:var(--warn-bg);border:1px solid #D9770633;color:#92400E}
+.foot{text-align:center;margin-top:26px;font-size:11.5px;color:var(--muted-2)}
+.foot a{color:var(--muted);font-weight:600;text-decoration:none}
+@media(max-width:520px){
+  body{padding:14px 10px 50px}
+  .doc{padding:20px 15px}
+  .meta{text-align:left;margin-left:0;width:100%}
+  .doc-head{border-bottom-width:1.5px}
+  td:first-child{max-width:150px}
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="root">
+  <div class="state"><div class="spinner"></div>Cargando presupuesto...</div>
+</div>
+
+<script>
+const SUPABASE_URL='https://tczjkfcfpfplzzrnpufr.supabase.co';
+const ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjemprZmNmcGZwbHp6cm5wdWZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyNzYwNjMsImV4cCI6MjA5ODg1MjA2M30.opOK-IUFs4_BP9--2s-dfqmw4pfP-ziS-aGxpHrYHI0';
+
+const root=document.getElementById('root');
+const token=new URLSearchParams(location.search).get('t')||'';
+
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtARS=n=>new Intl.NumberFormat('es-AR',{minimumFractionDigits:0,maximumFractionDigits:2}).format(n||0);
+const fmtDate=d=>{const dt=new Date(d); return isNaN(dt)?'—':dt.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'})};
+
+function calc(q){
+  const sub=(q.items||[]).reduce((a,i)=>a+(Number(i.qty)||0)*(Number(i.price)||0),0);
+  const disc=sub*((Number(q.discount)||0)/100);
+  const base=sub-disc;
+  const iva=q.iva_enabled?base*((Number(q.iva_rate)||0)/100):0;
+  return {subtotal:sub,discountAmount:disc,ivaAmount:iva,total:base+iva};
+}
+
+function showState(title,msg){
+  root.innerHTML=`<div class="state"><h2>${esc(title)}</h2>${msg?`<div>${esc(msg)}</div>`:''}</div>`;
+}
+
+function bannerFor(q){
+  if(q.status==='aprobado'){
+    const quien=q.decided_by?esc(q.decided_by):'El cliente';
+    return `<div class="banner b-ok"><div class="ic">✅</div><div><strong>Presupuesto aprobado</strong><span>${quien} lo aprobó el ${fmtDate(q.approved_at)}.</span></div></div>`;
+  }
+  if(q.status==='rechazado'){
+    return `<div class="banner b-no"><div class="ic">✕</div><div><strong>Presupuesto rechazado</strong><span>Se registró el rechazo el ${fmtDate(q.approved_at)}.</span></div></div>`;
+  }
+  return '';
+}
+
+function render(q,b){
+  const c=calc(q);
+  const vu=new Date(q.date); vu.setDate(vu.getDate()+(Number(q.validity_days)||7));
+  const vencido = q.status==='vencido';
+  const decidido = q.status==='aprobado'||q.status==='rechazado';
+
+  const items=(q.items||[]).filter(i=>i.desc||i.price>0);
+  const rows=items.length?items.map(i=>`<tr>
+      <td>${esc(i.desc||'—')}</td>
+      <td>${esc(i.qty)} ${esc(i.unit||'')}</td>
+      <td>$${fmtARS(i.price)}</td>
+      <td>$${fmtARS((Number(i.qty)||0)*(Number(i.price)||0))}</td>
+    </tr>`).join('')
+    :`<tr><td colspan="4" style="text-align:center;color:var(--muted-2);padding:18px">Sin ítems</td></tr>`;
+
+  let panel='';
+  if(decidido){
+    panel=bannerFor(q);
+  } else {
+    panel=`
+    ${vencido?`<div class="banner b-warn"><div class="ic">⏳</div><div><strong>Este presupuesto venció</strong><span>Podés aprobarlo igual, pero conviene confirmar el precio con el profesional.</span></div></div>`:''}
+    <div class="panel">
+      <h2>¿Avanzamos con este presupuesto?</h2>
+      <p>Tu respuesta le llega al profesional al instante.</p>
+      <div class="field">
+        <label for="nm">Tu nombre (opcional)</label>
+        <input id="nm" type="text" placeholder="Para que sepa quién respondió" maxlength="120" autocomplete="name"/>
+      </div>
+      <div class="acts">
+        <button class="btn btn-ok" id="ok">✓ Aprobar este presupuesto</button>
+        <button class="btn btn-no" id="no">Rechazar</button>
+      </div>
+      <div id="err" style="display:none;color:var(--danger);font-size:13px;margin-top:12px"></div>
+    </div>`;
+  }
+
+  root.innerHTML=`
+  <div class="doc">
+    <div class="doc-head">
+      <div class="biz">
+        ${b&&b.logo_url?`<img class="biz-logo" src="${esc(b.logo_url)}" alt=""/>`:''}
+        <h3>${esc(b?.name||'Presupuesto')}</h3>
+        <div class="biz-info">
+          ${b?.cuit?`CUIT: ${esc(b.cuit)}<br>`:''}
+          ${b?.phone?`Tel: ${esc(b.phone)}<br>`:''}
+          ${b?.email?`${esc(b.email)}<br>`:''}
+          ${b?.address?esc(b.address):''}
+        </div>
+      </div>
+      <div class="meta">
+        <div class="meta-label">Presupuesto</div>
+        <div class="meta-num">N° ${esc(q.number)}</div>
+        <div class="meta-dates">
+          <strong>Fecha:</strong> ${fmtDate(q.date)}<br>
+          <strong>Válido hasta:</strong> ${fmtDate(vu)}
+          ${q.delivery_date?`<br><strong>Entrega est.:</strong> ${fmtDate(q.delivery_date)}`:''}
+        </div>
+      </div>
+    </div>
+
+    <div class="cli">
+      <div class="cli-label">Cliente</div>
+      <div class="cli-name">${esc(q.client_name||'—')}</div>
+      ${(q.client_phone||q.client_address)?`<div class="cli-info">${q.client_phone?'Tel: '+esc(q.client_phone):''}${q.client_phone&&q.client_address?' · ':''}${q.client_address?esc(q.client_address):''}</div>`:''}
+    </div>
+
+    <table>
+      <thead><tr><th>Descripción</th><th>Cant.</th><th>P. Unit.</th><th>Subtotal</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    <div class="tot">
+      <div class="tot-row"><span>Subtotal</span><strong>$${fmtARS(c.subtotal)}</strong></div>
+      ${c.discountAmount>0?`<div class="tot-row"><span>Descuento ${esc(q.discount)}%</span><strong>-$${fmtARS(c.discountAmount)}</strong></div>`:''}
+      ${q.iva_enabled?`<div class="tot-row"><span>IVA ${esc(q.iva_rate)}%</span><strong>$${fmtARS(c.ivaAmount)}</strong></div>`:''}
+      <div class="tot-row grand"><span>Total</span><strong>$${fmtARS(c.total)}</strong></div>
+    </div>
+
+    ${q.payment_terms?`<div class="notes"><div class="notes-title">Condiciones de pago</div><div class="notes-body">${esc(q.payment_terms)}</div></div>`:''}
+    ${q.notes?`<div class="notes"><div class="notes-title">Observaciones</div><div class="notes-body">${esc(q.notes)}</div></div>`:''}
+  </div>
+
+  ${panel}
+
+  <div class="foot">Presupuesto enviado con <a href="/" target="_blank" rel="noopener">Presupuestador Pro</a></div>`;
+
+  if(!decidido) wireButtons(q);
+}
+
+function wireButtons(q){
+  const ok=document.getElementById('ok');
+  const no=document.getElementById('no');
+  const err=document.getElementById('err');
+
+  async function decide(decision){
+    ok.disabled=true; no.disabled=true; err.style.display='none';
+    ok.textContent = decision==='aprobado' ? 'Enviando...' : '✓ Aprobar este presupuesto';
+    if(decision==='rechazado') no.textContent='Enviando...';
+    const name=(document.getElementById('nm')?.value||'').trim();
+    try{
+      const r=await fetch(`${SUPABASE_URL}/functions/v1/decide-quote`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':ANON_KEY},
+        body:JSON.stringify({token,decision,name})
+      });
+      const data=await r.json();
+      if(!r.ok){
+        if(data.error==='YA_DECIDIDO'){ location.reload(); return; }
+        throw new Error(data.error||'Error');
+      }
+      if(window.gtag) gtag('event', decision==='aprobado'?'quote_approved':'quote_rejected');
+      const c=calc(q);
+      root.innerHTML = decision==='aprobado'
+        ? `<div class="panel" style="margin-top:0">
+             <div style="font-size:44px;margin-bottom:10px">🎉</div>
+             <h2>¡Listo, presupuesto aprobado!</h2>
+             <p>Le avisamos al profesional. Se va a poner en contacto con vos para coordinar.</p>
+             <div class="tot-row grand" style="justify-content:center;gap:10px;border:none;margin:0"><span>Total acordado</span><strong>$${fmtARS(c.total)}</strong></div>
+           </div>`
+        : `<div class="panel" style="margin-top:0">
+             <div style="font-size:44px;margin-bottom:10px">👍</div>
+             <h2>Gracias por responder</h2>
+             <p>Le avisamos al profesional que no vas a avanzar con este presupuesto.</p>
+           </div>`;
+      window.scrollTo({top:0,behavior:'smooth'});
+    }catch(e){
+      console.error(e);
+      err.textContent='No pudimos registrar tu respuesta. Revisá tu conexión y probá de nuevo.';
+      err.style.display='block';
+      ok.disabled=false; no.disabled=false;
+      ok.textContent='✓ Aprobar este presupuesto';
+      no.textContent='Rechazar';
+    }
+  }
+
+  ok.onclick=()=>decide('aprobado');
+  no.onclick=()=>{ if(confirm('¿Confirmás que no querés avanzar con este presupuesto?')) decide('rechazado'); };
+}
+
+(async function(){
+  if(!token){ showState('Link inválido','Pedile al profesional que te reenvíe el link del presupuesto.'); return; }
+  try{
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/public-quote?token=${encodeURIComponent(token)}`,{headers:{'apikey':ANON_KEY}});
+    const data=await r.json();
+    if(!r.ok){
+      showState(r.status===404?'Presupuesto no encontrado':'No pudimos abrir el presupuesto',
+                r.status===404?'El link puede estar incompleto o el presupuesto fue eliminado.':'Probá de nuevo en unos minutos.');
+      return;
+    }
+    document.title=`Presupuesto N° ${data.quote.number}${data.business?.name?' — '+data.business.name:''}`;
+    render(data.quote,data.business);
+  }catch(e){
+    console.error(e);
+    showState('No pudimos abrir el presupuesto','Revisá tu conexión a internet y probá de nuevo.');
+  }
+})();
+</script>
+</body>
+</html>
