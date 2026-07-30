@@ -234,7 +234,7 @@ const S={
 function bizFromRow(r){return{name:r.name,cuit:r.cuit||'',phone:r.phone||'',email:r.email||'',address:r.address||'',rubro:r.rubro||'',logo:r.logo_url||null,paymentTerms:r.payment_terms||'',nextNum:r.next_num||1}}
 function bizToRow(b){return{user_id:S.session.user.id,name:b.name,cuit:b.cuit||null,phone:b.phone||null,email:b.email||null,address:b.address||null,rubro:b.rubro||null,logo_url:b.logo||null,payment_terms:b.paymentTerms||null,next_num:b.nextNum||1}}
 function quoteFromRow(r){return{id:r.id,number:r.number,date:r.date,validityDays:r.validity_days,client:{name:r.client_name||'',phone:r.client_phone||'',address:r.client_address||''},items:r.items||[],ivaEnabled:r.iva_enabled,ivaRate:Number(r.iva_rate),discount:Number(r.discount),paymentTerms:r.payment_terms||'',notes:r.notes||'',status:r.status,workStatus:r.work_status||'pendiente',deliveryDate:r.delivery_date||'',templateId:r.template_id||'',publicToken:r.public_token||null,approvedAt:r.approved_at||null,decidedBy:r.decided_by||'',createdAt:r.created_at,updatedAt:r.updated_at}}
-function quoteToRow(q){return{user_id:S.session.user.id,number:q.number,date:(q.date||new Date().toISOString()).slice(0,10),validity_days:q.validityDays,client_name:q.client.name||null,client_phone:q.client.phone||null,client_address:q.client.address||null,items:q.items,iva_enabled:q.ivaEnabled,iva_rate:q.ivaRate,discount:q.discount,payment_terms:q.paymentTerms||null,notes:q.notes||null,status:q.status,delivery_date:q.deliveryDate||null,template_id:q.templateId||null,updated_at:new Date().toISOString()}}
+function quoteToRow(q){return{user_id:S.session.user.id,number:q.number,date:(q.date||new Date().toISOString()).slice(0,10),validity_days:q.validityDays,client_name:q.client.name||null,client_phone:q.client.phone||null,client_address:q.client.address||null,items:q.items,iva_enabled:q.ivaEnabled,iva_rate:q.ivaRate,discount:q.discount,payment_terms:q.paymentTerms||null,notes:q.notes||null,status:q.status,work_status:q.workStatus||'pendiente',delivery_date:q.deliveryDate||null,template_id:q.templateId||null,updated_at:new Date().toISOString()}}
 function catFromRow(r){return{id:r.id,desc:r.description,unit:r.unit,price:Number(r.price),category:r.category||''}}
 function catToRow(c){return{user_id:S.session.user.id,description:c.desc,unit:c.unit||'un',price:c.price||0,category:c.category||null}}
 function subFromRow(r){return{plan:r.plan,status:r.status,founderNumber:r.founder_number,currentPrice:r.current_price?Number(r.current_price):null,mpPreapprovalId:r.mp_preapproval_id}}
@@ -371,6 +371,12 @@ const STATUS_LIST=['enviado','aprobado','rechazado','vencido'];
 /* Tolera cualquier valor inesperado sin romper el render */
 const statusInfo=s=>STATUS_MAP[s]||{label:s||'—',css:'status-vencido'};
 
+/* Ciclo del TRABAJO (una vez aprobado el presupuesto) */
+const WORK_STATUS_MAP={pendiente:{label:'Pendiente de cobro',short:'Pendiente',css:'status-pendiente'},en_ejecucion:{label:'En ejecución',short:'En ejecución',css:'status-en_ejecucion'},cobrado:{label:'Cobrado',short:'Cobrado',css:'status-cobrado'}};
+const WORK_STATUS_LIST=['pendiente','en_ejecucion','cobrado'];
+const workStatusInfo=s=>WORK_STATUS_MAP[s]||WORK_STATUS_MAP.pendiente;
+const COBRO_ALERT_DAYS=7;
+
 /* ---- Utilidades ---- */
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>[...r.querySelectorAll(s)];
@@ -469,10 +475,14 @@ const accAmt=acc.reduce((a,q)=>a+calc(q).total,0);const cobAmt=S.quotes.filter(q
 const rate=total>0?Math.round((acc.length/Math.max(acc.length+rej.length,1))*100):0;
 const ticketAvg=acc.length>0?Math.round(accAmt/acc.length):0;
 const stale=pend.filter(q=>daysSince(q.createdAt)>=3);
+const staleCobro=S.quotes.filter(q=>q.status==='aprobado'&&q.workStatus==='pendiente'&&q.approvedAt&&daysSince(q.approvedAt)>=COBRO_ALERT_DAYS);
 const recent=[...S.quotes].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
 
 let reminderHTML='';
 if(stale.length>0){reminderHTML=`<div class="reminder-box"><div class="r-icon">⏰</div><div class="r-text"><strong>${stale.length} presupuesto${stale.length>1?'s':''}</strong> sin respuesta hace más de 3 días</div><button class="btn btn-soft btn-sm" id="seeStale">Ver y hacer seguimiento</button></div>`}
+
+let cobroHTML='';
+if(staleCobro.length>0){cobroHTML=`<div class="reminder-box" style="background:var(--danger-bg);border-color:#DC262633"><div class="r-icon">💸</div><div class="r-text" style="color:var(--danger)"><strong>${staleCobro.length} trabajo${staleCobro.length>1?'s':''}</strong> aprobado${staleCobro.length>1?'s':''} hace ${COBRO_ALERT_DAYS}+ días sin cobrar</div><button class="btn btn-soft btn-sm" id="seeCobro">Ver</button></div>`}
 
 let planHTML='';
 if((S.subscription?.plan||'free')==='free'){const usedQ=quotesUsedTotal();const slotsLeft=Math.max(30-(S.founderSlotsTaken||0),0);
@@ -491,6 +501,7 @@ ${n.quote_id?`<button class="btn btn-soft btn-sm" data-notif-open="${n.quote_id}
 w.innerHTML=`<div class="home-cta"><div class="home-cta-copy"><h2>¿Nuevo <em>trabajo</em>?</h2><p>Armá el presupuesto en 2 minutos, mandalo en PDF por WhatsApp y cerrá más.</p></div><button class="btn btn-action btn-lg" id="newQ">${icoPlus()} Crear presupuesto</button></div>
 ${notsHTML}
 ${reminderHTML}
+${cobroHTML}
 ${planHTML}
 <div class="home-grid">
 <div class="stat-card"><div class="stat-label">Presupuestos</div><div class="stat-val">${total}</div><div class="stat-sub">${pend.length} pendientes</div></div>
@@ -504,6 +515,7 @@ ${planHTML}
 $('#newQ',w).onclick=()=>setView('new');
 const va=$('#verAll',w);if(va)va.onclick=()=>setView('history');
 const ss=$('#seeStale',w);if(ss)ss.onclick=()=>{S.filter='enviado';setView('history')};
+const sc=$('#seeCobro',w);if(sc)sc.onclick=()=>{S.filter='cobro_pendiente';setView('history')};
 const gb=$('#goBilling',w);if(gb)gb.onclick=()=>setView('billing');
 $$('[data-notif-read]',w).forEach(b=>b.onclick=async()=>{await markNotificationRead(b.dataset.notifRead);render()});
 $$('[data-notif-open]',w).forEach(b=>b.onclick=()=>{const q=S.quotes.find(x=>x.id===b.dataset.notifOpen);if(q)setView('preview',q);else toast('Ese presupuesto ya no existe')});
@@ -606,7 +618,7 @@ renderItems();m.appendChild(w)}
 function vPreview(m){const w=document.createElement('div');w.className='view';const q=S.currentQuote;const days=daysSince(q.createdAt);
 const followUpHTML=q.status==='enviado'&&days>=3?`<button class="btn btn-soft btn-sm" id="followUp" style="color:var(--warn)">⏰ Seguimiento (${days} días)</button>`:'';
 w.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px;gap:12px;flex-wrap:wrap">
-<div><h2 class="serif">Presupuesto N° ${q.number}</h2><p class="muted" style="font-size:13px;margin-top:3px">${esc(q.client.name||'Sin cliente')} · <span class="status-pill ${statusInfo(q.status).css}"><span class="d"></span>${statusInfo(q.status).label}</span></p></div>
+<div><h2 class="serif">Presupuesto N° ${q.number}</h2><p class="muted" style="font-size:13px;margin-top:3px">${esc(q.client.name||'Sin cliente')} · <span class="status-pill ${statusInfo(q.status).css}"><span class="d"></span>${statusInfo(q.status).label}</span>${q.status==='aprobado'?` · <span class="status-pill ${workStatusInfo(q.workStatus).css}"><span class="d"></span>${workStatusInfo(q.workStatus).short}</span>`:''}</p></div>
 <div style="display:flex;gap:6px;flex-wrap:wrap">
 <button class="btn btn-ghost btn-sm" id="backB">${icoArrL()} Volver</button>
 <button class="btn btn-soft btn-sm" id="editB">${icoEdit()} Editar</button>
@@ -617,13 +629,29 @@ ${followUpHTML}
 <button class="btn btn-action btn-sm" id="waB">${icoWA()} WhatsApp</button>
 </div></div>
 ${approvalInfoHTML(q)}
+${workStatusPanelHTML(q)}
 <div style="max-width:720px;margin:0 auto">${previewHTML(q)}</div>`;
 $('#backB',w).onclick=()=>setView('history');$('#editB',w).onclick=()=>setView('edit',q);$('#pdfB',w).onclick=()=>downloadPDF(q);$('#waB',w).onclick=()=>sendWA(q);
 $('#linkB',w).onclick=()=>copyPublicLink(q);
 $('#dupB',w).onclick=async()=>{const draft={...JSON.parse(JSON.stringify(q)),id:null,number:pad(S.business.nextNum||1),date:new Date().toISOString(),status:'enviado',createdAt:new Date().toISOString()};
 const saved=await insertQuote(draft);if(saved&&saved.quotaExceeded){showQuotaModal();return}if(!saved)return;await bumpNextNum();S.quotes.unshift(saved);toast('Duplicado como N° '+saved.number);setView('edit',saved)};
 const fu=$('#followUp',w);if(fu)fu.onclick=()=>sendFollowUp(q);
+$$('[data-work-st]',w).forEach(b=>b.onclick=()=>updateWorkStatus(q,b.dataset.workSt));
+const crB=$('#cobroRemB',w);if(crB)crB.onclick=()=>copyCobroReminder(q);
 m.appendChild(w)}
+
+/* Panel para pasar el trabajo por pendiente/en ejecución/cobrado (solo si el presupuesto está aprobado) */
+function workStatusPanelHTML(q){
+if(q.status!=='aprobado')return'';
+const daysPend=q.approvedAt?daysSince(q.approvedAt):null;
+const stale=q.workStatus==='pendiente'&&daysPend!==null&&daysPend>=COBRO_ALERT_DAYS;
+const btns=WORK_STATUS_LIST.map(s=>`<button class="btn ${q.workStatus===s?'btn-primary':'btn-soft'} btn-sm" data-work-st="${s}">${workStatusInfo(s).short}</button>`).join('');
+return `<div class="card" style="margin-bottom:18px">
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+<div><div class="card-title" style="font-size:15px;margin-bottom:2px">Estado del trabajo</div><div class="muted" style="font-size:12.5px">${stale?`⏰ Sin cobrar hace ${daysPend} días`:'Actualizalo a medida que avanza'}</div></div>
+<div style="display:flex;gap:6px;flex-wrap:wrap">${btns}${q.workStatus!=='cobrado'?`<button class="btn btn-soft btn-sm" id="cobroRemB">${icoWA()} Recordatorio de cobro</button>`:''}</div>
+</div></div>`;
+}
 
 /* ---- PREVIEW HTML (reutilizable) ---- */
 function previewHTML(q){const b=S.business||{name:'Tu negocio'};const c=calc(q);const vu=new Date(q.date);vu.setDate(vu.getDate()+(Number(q.validityDays)||7));
@@ -644,8 +672,12 @@ ${q.notes?`<div class="preview-notes"><div class="preview-notes-title">Observaci
 
 /* ---- HISTORY ---- */
 function vHistory(m){const w=document.createElement('div');w.className='view';
-const filters=[{id:'todos',l:'Todos'},...STATUS_LIST.map(s=>({id:s,l:statusInfo(s).label}))];
-const list=S.quotes.filter(q=>S.filter==='todos'||q.status===S.filter).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+const filters=[{id:'todos',l:'Todos'},...STATUS_LIST.map(s=>({id:s,l:statusInfo(s).label})),{id:'cobro_pendiente',l:'💸 Cobro pendiente'}];
+const list=S.quotes.filter(q=>{
+  if(S.filter==='todos')return true;
+  if(S.filter==='cobro_pendiente')return q.status==='aprobado'&&q.workStatus!=='cobrado';
+  return q.status===S.filter;
+}).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
 w.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px;flex-wrap:wrap;gap:14px">
 <div><h2 class="serif">Historial</h2><p class="muted" style="font-size:13px;margin-top:3px">${S.quotes.length} presupuestos</p></div>
 <div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-soft btn-sm" id="xlsBtn">${icoDL()} Exportar Excel</button><button class="btn btn-action btn-sm" id="newHQ">${icoPlus()} Nuevo</button></div></div>
@@ -661,7 +693,7 @@ m.appendChild(w)}
 function renderQRow(q){const t=calc(q).total;const days=daysSince(q.createdAt);const staleTag=q.status==='enviado'&&days>=3?`<span style="font-size:10px;color:var(--warn);margin-left:4px">(${days}d)</span>`:'';
 return`<div class="quote-row" data-id="${q.id}"><div class="q-num mono">N° ${q.number}</div><div class="q-client"><strong>${esc(q.client.name||'Sin cliente')}</strong><span>${q.items.length} item${q.items.length!==1?'s':''}</span></div>
 <div class="q-date">${fmtDate(q.createdAt||q.date)}</div><div class="q-amount">$${fmtARS(t)}</div>
-<div class="q-actions"><span class="status-pill ${statusInfo(q.status).css}"><span class="d"></span>${statusInfo(q.status).label}</span>${staleTag}
+<div class="q-actions"><span class="status-pill ${statusInfo(q.status).css}"><span class="d"></span>${statusInfo(q.status).label}</span>${q.status==='aprobado'?`<span class="status-pill ${workStatusInfo(q.workStatus).css}"><span class="d"></span>${workStatusInfo(q.workStatus).short}</span>`:''}${staleTag}
 <button class="btn btn-soft btn-sm bv" title="Ver">${icoEye()}</button><button class="btn btn-soft btn-sm bw" title="WhatsApp">${icoWA()}</button><button class="btn btn-soft btn-sm bm" title="Más">${icoDots()}</button></div></div>`}
 
 function attachQHandlers(root){$$('.quote-row',root).forEach(row=>{const id=row.dataset.id;const q=S.quotes.find(x=>x.id===id);
@@ -836,6 +868,34 @@ let ph=(q.client.phone||'').replace(/\D/g,'');if(ph&&!ph.startsWith('549')&&ph.l
 const url=ph?`https://wa.me/${ph}?text=${encodeURIComponent(msg)}`:`https://wa.me/?text=${encodeURIComponent(msg)}`;
 try{const w2=window.open(url,'_blank');if(!w2)location.href=url}catch(e){location.href=url}toast('Seguimiento enviado')}
 
+/* ---- Estado del trabajo (Fase 2) ---- */
+async function updateWorkStatus(q,newWorkStatus){
+const updated={...q,workStatus:newWorkStatus};
+const saved=await updateQuote(updated);
+if(!saved)return;
+const ex=S.quotes.findIndex(x=>x.id===q.id);if(ex>=0)S.quotes[ex]=saved;
+toast('Trabajo: '+workStatusInfo(saved.workStatus).label);
+if(S.currentQuote&&S.currentQuote.id===saved.id)S.currentQuote=saved;
+render();
+}
+
+function cobroReminderText(q){const c=calc(q);
+return `Hola${q.client.name?' '+q.client.name:''}! 👋\n\nTe escribo por el presupuesto N° ${q.number} (total $${fmtARS(c.total)}), que quedó pendiente de cobro.\n\n¿Coordinamos el pago cuando puedas? ¡Gracias!`;
+}
+
+async function copyCobroReminder(q){const text=cobroReminderText(q);
+try{await navigator.clipboard.writeText(text);toast('Recordatorio copiado — pegalo en WhatsApp')}
+catch(e){
+  const modal=document.createElement('div');modal.className='modal-bg';
+  modal.innerHTML=`<div class="modal"><div class="modal-title">Recordatorio de cobro</div>
+  <div class="modal-sub">Copialo y mandáselo por WhatsApp.</div>
+  <div class="field"><textarea class="textarea" id="crTxt" style="min-height:120px" readonly>${esc(text)}</textarea></div>
+  <div class="modal-actions"><button class="btn btn-soft" id="crClose">Cerrar</button></div></div>`;
+  document.body.appendChild(modal);modal.onclick=ev=>{if(ev.target===modal)modal.remove()};
+  $('#crClose',modal).onclick=()=>modal.remove();
+  const ta=$('#crTxt',modal);ta.focus();ta.select();
+}}
+
 /* ---- PDF ---- */
 async function downloadPDF(q,showT=true){try{if(!window.jspdf){toast('Cargando generador PDF, reintentá en 2 segundos');return}const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});const b=S.business;const c=calc(q);
 const vu=new Date(q.date);vu.setDate(vu.getDate()+(Number(q.validityDays)||7));const M=20,W=210,R=W-M;let y=M;
@@ -875,7 +935,7 @@ function loadImg(s){return new Promise((r,j)=>{const i=new Image();i.onload=()=>
 
 /* ---- EXPORT EXCEL ---- */
 function exportXLS(){if(!window.XLSX){toast('Error: SheetJS no cargó');return}
-const data=S.quotes.map(q=>{const c=calc(q);return{'N°':q.number,Cliente:q.client.name||'',Teléfono:q.client.phone||'',Fecha:fmtDate(q.createdAt||q.date),Estado:statusInfo(q.status).label,Items:q.items.length,Subtotal:Math.round(c.subtotal),Descuento:Math.round(c.discountAmount),IVA:Math.round(c.ivaAmount),Total:Math.round(c.total)}});
+const data=S.quotes.map(q=>{const c=calc(q);return{'N°':q.number,Cliente:q.client.name||'',Teléfono:q.client.phone||'',Fecha:fmtDate(q.createdAt||q.date),Estado:statusInfo(q.status).label,Trabajo:q.status==='aprobado'?workStatusInfo(q.workStatus).label:'',Items:q.items.length,Subtotal:Math.round(c.subtotal),Descuento:Math.round(c.discountAmount),IVA:Math.round(c.ivaAmount),Total:Math.round(c.total)}});
 const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Presupuestos');
 // Detail sheet
 const detail=[];S.quotes.forEach(q=>{q.items.forEach(i=>{detail.push({'N° Presup.':q.number,Cliente:q.client.name||'',Item:i.desc||'',Cantidad:i.qty,Unidad:i.unit||'','P. Unitario':i.price||0,Subtotal:Math.round((i.qty||0)*(i.price||0))})})});
