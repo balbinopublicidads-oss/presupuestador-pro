@@ -755,11 +755,24 @@ function renderQRow(q){const t=calc(q).total;const days=daysSince(q.createdAt);c
 return`<div class="quote-row" data-id="${q.id}"><div class="q-num mono">N° ${q.number}</div><div class="q-client"><strong>${esc(q.client.name||'Sin cliente')}</strong><span>${q.items.length} item${q.items.length!==1?'s':''}</span></div>
 <div class="q-date">${fmtDate(q.createdAt||q.date)}</div><div class="q-amount">$${fmtARS(t)}</div>
 <div class="q-actions"><span class="status-pill ${statusInfo(q.status).css}"><span class="d"></span>${statusInfo(q.status).label}</span>${q.status==='aprobado'?`<span class="status-pill ${workStatusInfo(q.workStatus).css}"><span class="d"></span>${workStatusInfo(q.workStatus).short}</span>`:''}${staleTag}
-<button class="btn btn-soft btn-sm bv" title="Ver">${icoEye()}</button><button class="btn btn-soft btn-sm bw" title="WhatsApp">${icoWA()}</button><button class="btn btn-soft btn-sm bm" title="Más">${icoDots()}</button></div></div>`}
+<button class="btn btn-soft btn-sm bv" title="Ver">${icoEye()}</button><button class="btn btn-soft btn-sm bt" title="Presupuestar a alguien nuevo con estos ítems">${icoDup()}</button><button class="btn btn-soft btn-sm bw" title="WhatsApp">${icoWA()}</button><button class="btn btn-soft btn-sm bm" title="Más">${icoDots()}</button></div></div>`}
 
 function attachQHandlers(root){$$('.quote-row',root).forEach(row=>{const id=row.dataset.id;const q=S.quotes.find(x=>x.id===id);
 $('.bv',row).onclick=e=>{e.stopPropagation();setView('preview',q)};$('.bw',row).onclick=e=>{e.stopPropagation();sendWA(q)};$('.bm',row).onclick=e=>{e.stopPropagation();openActionsModal(q)};
+$('.bt',row).onclick=e=>{e.stopPropagation();duplicateAsTemplate(q)};
 row.onclick=()=>setView('preview',q)})}
+
+/* ---- Duplicar como plantilla para un cliente nuevo (Fase 5) ---- */
+async function duplicateAsTemplate(q){
+const draft={...JSON.parse(JSON.stringify(q)),id:null,number:pad(S.business.nextNum||1),date:new Date().toISOString(),status:'enviado',workStatus:'pendiente',client:{name:'',phone:'',address:''},createdAt:new Date().toISOString()};
+const saved=await insertQuote(draft);
+if(saved&&saved.quotaExceeded){showQuotaModal();return}
+if(!saved)return;
+await bumpNextNum();
+S.quotes.unshift(saved);
+toast('Presupuesto creado a partir de N° '+q.number+' — completá el cliente');
+setView('edit',saved);
+}
 
 /* ---- CATALOG ---- */
 function vCatalog(m){const w=document.createElement('div');w.className='view';
