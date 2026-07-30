@@ -92,8 +92,8 @@ language plpgsql security definer as $$
 begin
   update quotes
     set status = 'vencido', updated_at = now()
-  where status = 'enviado'
-    and (date + coalesce(validity_days, 7)) < current_date;
+  where quotes.status = 'enviado'
+    and (quotes.date + coalesce(quotes.validity_days, 7)) < current_date;
 end;
 $$;
 
