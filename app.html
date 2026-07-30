@@ -699,6 +699,7 @@ const saved=await insertQuote(draft);if(saved&&saved.quotaExceeded){showQuotaMod
 const fu=$('#followUp',w);if(fu)fu.onclick=()=>sendFollowUp(q);
 $$('[data-work-st]',w).forEach(b=>b.onclick=()=>updateWorkStatus(q,b.dataset.workSt));
 const crB=$('#cobroRemB',w);if(crB)crB.onclick=()=>copyCobroReminder(q);
+const agB=$('#agreementB',w);if(agB)agB.onclick=()=>downloadAgreementPDF(q);
 m.appendChild(w)}
 
 /* Panel para pasar el trabajo por pendiente/en ejecución/cobrado (solo si el presupuesto está aprobado) */
@@ -710,7 +711,7 @@ const btns=WORK_STATUS_LIST.map(s=>`<button class="btn ${q.workStatus===s?'btn-p
 return `<div class="card" style="margin-bottom:18px">
 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
 <div><div class="card-title" style="font-size:15px;margin-bottom:2px">Estado del trabajo</div><div class="muted" style="font-size:12.5px">${stale?`⏰ Sin cobrar hace ${daysPend} días`:'Actualizalo a medida que avanza'}</div></div>
-<div style="display:flex;gap:6px;flex-wrap:wrap">${btns}${q.workStatus!=='cobrado'?`<button class="btn btn-soft btn-sm" id="cobroRemB">${icoWA()} Recordatorio de cobro</button>`:''}</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap">${btns}${q.workStatus!=='cobrado'?`<button class="btn btn-soft btn-sm" id="cobroRemB">${icoWA()} Recordatorio de cobro</button>`:''}<button class="btn btn-soft btn-sm" id="agreementB">${icoDL()} Generar acuerdo de trabajo</button></div>
 </div></div>`;
 }
 
@@ -1027,6 +1028,69 @@ const uri=doc.output('datauristring');const w2=window.open('');if(w2){w2.documen
 const a=document.createElement('a');a.href=uri;a.download=fname;document.body.appendChild(a);a.click();a.remove();if(showT)toast('PDF descargado')}}
 }catch(e){console.error('PDF error:',e);toast('Error al generar PDF. Descargá el archivo HTML y abrilo en Chrome.')}}
 function loadImg(s){return new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=s})}
+
+/* ---- PDF: Acuerdo de trabajo (Fase 6) ----
+   Documento simple en lenguaje claro para monotributistas. No es un contrato
+   legal formal — se aclara explícitamente al pie del documento. */
+async function downloadAgreementPDF(q){try{if(!window.jspdf){toast('Cargando generador PDF, reintentá en 2 segundos');return}const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});const b=S.business;const c=calc(q);const M=20,W=210,R=W-M;let y=M;
+if(b.logo){try{const img=await loadImg(b.logo);const ratio=img.width/img.height;const lh=16,lw=Math.min(lh*ratio,45);doc.addImage(b.logo,'PNG',M,y,lw,lh)}catch(e){}}
+doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(15,23,42);doc.text('ACUERDO DE TRABAJO',M,y+18);
+doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(100,116,139);doc.text('Basado en el presupuesto N° '+q.number+' · '+fmtDate(new Date()),M,y+23);
+y+=30;doc.setDrawColor(15,23,42);doc.setLineWidth(0.5);doc.line(M,y,R,y);y+=8;
+
+doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(100,116,139);doc.text('PRESTADOR',M,y);y+=4.5;
+doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(15,23,42);doc.text(b.name||'—',M,y);y+=4;
+doc.setFontSize(8.5);doc.setTextColor(100,116,139);
+const provInfo=[b.cuit&&'CUIT: '+b.cuit,b.phone&&'Tel: '+b.phone].filter(Boolean).join(' · ');if(provInfo){doc.text(provInfo,M,y);y+=4}
+y+=4;
+doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(100,116,139);doc.text('CLIENTE',M,y);y+=4.5;
+doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(15,23,42);doc.text(q.client.name||'—',M,y);y+=4;
+doc.setFontSize(8.5);doc.setTextColor(100,116,139);
+const cliInfo=[q.client.phone&&'Tel: '+q.client.phone,q.client.address].filter(Boolean).join(' · ');if(cliInfo){doc.text(cliInfo,M,y);y+=4}
+y+=6;
+
+doc.setFillColor(15,23,42);doc.rect(M,y,R-M,0.4,'F');y+=6;
+doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(15,23,42);doc.text('DESCRIPCIÓN DEL TRABAJO',M,y);y+=5.5;
+doc.setFont('helvetica','normal');doc.setFontSize(9.5);
+const items=(q.items||[]).filter(i=>i.desc||i.price>0);
+items.forEach(i=>{const line=`• ${i.desc||'—'} (${i.qty} ${i.unit||''})`;const dl=doc.splitTextToSize(line,R-M);doc.text(dl,M,y);y+=dl.length*4.3;if(y>250){doc.addPage();y=M}});
+y+=4;
+
+doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(37,99,235);doc.text('MONTO TOTAL ACORDADO: $'+fmtARS(c.total),M,y);y+=9;
+
+doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(100,116,139);doc.text('FORMA DE PAGO',M,y);y+=4.5;
+doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(15,23,42);
+const payLines=doc.splitTextToSize(q.paymentTerms||'A definir entre las partes.',R-M);doc.text(payLines,M,y);y+=payLines.length*4.3+5;
+
+doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(100,116,139);doc.text('PLAZO DE ENTREGA / EJECUCIÓN',M,y);y+=4.5;
+doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(15,23,42);doc.text(q.deliveryDate?fmtDate(q.deliveryDate):'A coordinar entre las partes.',M,y);y+=9;
+
+if(y>225){doc.addPage();y=M}
+doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(100,116,139);doc.text('CONDICIONES',M,y);y+=5;
+doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(15,23,42);
+const clauses=[
+'1. El prestador se compromete a realizar el trabajo descripto arriba, en el plazo indicado y por el monto total acordado.',
+'2. El cliente se compromete a abonar el monto acordado según la forma de pago indicada.',
+'3. Cualquier trabajo adicional no incluido en este acuerdo deberá presupuestarse y acordarse por separado.'
+];
+clauses.forEach(cl=>{const cll=doc.splitTextToSize(cl,R-M);doc.text(cll,M,y);y+=cll.length*4.3+2;if(y>250){doc.addPage();y=M}});
+y+=4;
+
+doc.setFont('helvetica','italic');doc.setFontSize(7.5);doc.setTextColor(148,163,184);
+const disclaimer='Este documento es un resumen del acuerdo entre las partes, redactado en lenguaje simple. No reemplaza asesoramiento legal o contable profesional, recomendado para trabajos de mayor envergadura o monto.';
+const discLines=doc.splitTextToSize(disclaimer,R-M);doc.text(discLines,M,y);y+=discLines.length*3.6+10;
+
+if(y<250)y=255;
+doc.setDrawColor(148,163,184);
+doc.line(M,y+12,M+55,y+12);doc.line(R-55,y+12,R,y+12);
+doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(148,163,184);
+doc.text('Firma del profesional',M+27,y+16,{align:'center'});doc.text('Firma del cliente',R-27,y+16,{align:'center'});
+
+const fname=`Acuerdo_${q.number}_${(q.client.name||'cliente').replace(/[^a-z0-9]/gi,'_')}.pdf`;
+try{doc.save(fname);toast('Acuerdo de trabajo descargado')}catch(e2){
+const uri=doc.output('datauristring');const w2=window.open('');if(w2){w2.document.write(`<html><head><title>${fname}</title></head><body style="margin:0"><iframe src="${uri}" style="width:100%;height:100vh;border:none"></iframe></body></html>`);w2.document.close();toast('Acuerdo abierto en nueva pestaña')}else{
+const a=document.createElement('a');a.href=uri;a.download=fname;document.body.appendChild(a);a.click();a.remove();toast('Acuerdo de trabajo descargado')}}
+}catch(e){console.error('Agreement PDF error:',e);toast('Error al generar el acuerdo. Probá de nuevo.')}}
 
 /* ---- EXPORT EXCEL ---- */
 function exportXLS(){if(!window.XLSX){toast('Error: SheetJS no cargó');return}
